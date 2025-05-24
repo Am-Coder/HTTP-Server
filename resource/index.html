@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Custom HTTP Server</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #333; }
+        .section { background: #f5f5f5; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        pre { background: #eee; padding: 10px; overflow: auto; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 15px; cursor: pointer; }
+        input, textarea { width: 100%; padding: 8px; margin: 5px 0; }
+    </style>
+</head>
+<body>
+<h1>Custom HTTP Server</h1>
+
+<div class="section">
+    <h2>API Test</h2>
+    <p>Send a request to the API endpoint:</p>
+    <select id="apiMethod">
+        <option value="GET">GET</option>
+        <option value="POST">POST</option>
+    </select>
+    <select id="apiEndpoint">
+        <option value="/info">/info</option>
+        <option value="/echo">/echo</option>
+    </select>
+    <div id="requestBodyContainer" style="display:none;">
+        <p>Request Body (JSON):</p>
+        <textarea id="requestBody" rows="4">{"message": "Hello Server"}</textarea>
+    </div>
+    <button onclick="sendApiRequest()">Send Request</button>
+    <h3>Response:</h3>
+    <pre id="apiResponse">Response will appear here</pre>
+</div>
+
+<div class="section">
+    <h2>File Upload</h2>
+    <input type="file" id="fileInput" required>
+    <button type="button" onclick="uploadFile()">Upload</button>
+    <h3>Upload Result:</h3>
+    <div id="uploadResult">Upload result will appear here</div>
+</div>
+
+<script>
+    // Show/hide request body based on method
+    document.getElementById('apiMethod').addEventListener('change', function() {
+        document.getElementById('requestBodyContainer').style.display =
+            this.value === 'POST' ? 'block' : 'none';
+    });
+
+    document.getElementById('apiEndpoint').addEventListener('change', function() {
+        if (this.value === '/echo') {
+            document.getElementById('apiMethod').value = 'POST';
+            document.getElementById('requestBodyContainer').style.display = 'block';
+        }
+    });
+
+    // Send API request
+    function sendApiRequest() {
+        const method = document.getElementById('apiMethod').value;
+        const endpoint = document.getElementById('apiEndpoint').value;
+        const requestBody = document.getElementById('requestBody').value;
+        const responseElement = document.getElementById('apiResponse');
+
+        responseElement.textContent = 'Sending request...';
+
+        const options = {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
+
+        if (method === 'POST') {
+            options.body = requestBody;
+        }
+
+        fetch('/api' + endpoint, options)
+            .then(response => response.json())
+            .then(data => {
+                responseElement.textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+                responseElement.textContent = 'Error: ' + error.message;
+            });
+    }
+
+    // Upload file
+    function uploadFile() {
+        const fileInput = document.getElementById('fileInput');
+        const resultElement = document.getElementById('uploadResult');
+
+        if (!fileInput.files.length) {
+            resultElement.textContent = 'Please select a file first.';
+            return;
+        }
+
+        const file = fileInput.files[0];
+        resultElement.textContent = 'Uploading...';
+
+        // Upload file as raw binary data
+        fetch('/upload', {
+            method: 'POST',
+            headers: {
+                'Content-Type': file.type || 'application/octet-stream',
+                'Content-Length': file.size.toString()
+            },
+            body: file
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Upload failed: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            resultElement.innerHTML = 'Upload successful!<br>' +
+                'File: ' + data.fileName + '<br>' +
+                'Size: ' + data.size + ' bytes';
+        })
+        .catch(error => {
+            resultElement.textContent = 'Error: ' + error.message;
+        });
+    }
+</script>
+</body>
+</html>
